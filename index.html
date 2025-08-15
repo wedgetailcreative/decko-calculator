@@ -1,0 +1,471 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>DECKO Deck Calculator • Boilerplate</title>
+<style>
+  :root{
+    --brand:#0ea5e9; --ink:#0f172a; --muted:#6b7280; --bg:#f6f7fb; --panel:#ffffff; --border:#e5e7eb;
+    --radius:16px;
+  }
+  *{box-sizing:border-box}
+  html,body{height:100%}
+  body{margin:0; font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, Arial; color:var(--ink); background:var(--bg);}
+  .app{display:grid; grid-template-columns:320px 1fr; gap:16px; height:100%; padding:16px;}
+  aside{background:var(--panel); border:1px solid var(--border); border-radius:var(--radius); padding:18px; overflow:auto;}
+  main{background:var(--panel); border:1px solid var(--border); border-radius:var(--radius); padding:12px; display:grid; grid-template-rows:auto 1fr auto; gap:12px;}
+  h1{margin:0 0 8px; font-size:clamp(18px,2.6vw,22px)}
+  .sub{color:var(--muted); font-size:14px;}
+  fieldset{border:0; margin:0 0 14px; padding:0}
+  .row{display:grid; grid-template-columns:1fr 1fr; gap:10px}
+  label{display:block; font-size:12px; color:var(--muted); margin:0 0 6px}
+  input, select{width:100%; padding:10px 12px; border:1px solid var(--border); border-radius:12px; font:inherit; background:#fff}
+  input[type="number"]{appearance:textfield}
+  .pill{display:inline-flex; align-items:center; gap:8px; padding:8px 10px; border:1px dashed var(--border); border-radius:999px; font-size:12px; color:var(--muted)}
+  .btn{display:inline-flex; align-items:center; justify-content:center; gap:8px; padding:10px 12px; border-radius:12px; border:1px solid var(--border); background:#fff; cursor:pointer}
+  .btn.primary{background:var(--brand); color:#fff; border-color:transparent}
+  .btn.ghost{background:#fff}
+  .toolbar{display:flex; align-items:center; gap:8px; flex-wrap:wrap}
+  canvas{width:100%; height:100%; background:#fff; border-radius:12px; border:1px solid var(--border)}
+  .legend{display:flex; gap:10px; align-items:center; flex-wrap:wrap; font-size:12px; color:var(--muted)}
+  .swatch{width:12px; height:12px; border-radius:3px; border:1px solid var(--border)}
+  .gridline{background:repeating-linear-gradient(0deg, transparent, transparent 19px, #f3f4f6 20px),
+             repeating-linear-gradient(90deg, transparent, transparent 19px, #f3f4f6 20px)}
+  .summary{display:grid; grid-template-columns:repeat(4, minmax(0,1fr)); gap:10px}
+  .card{border:1px solid var(--border); border-radius:12px; padding:10px; background:#fff}
+  .card h3{margin:0 0 4px; font-size:12px; color:var(--muted)}
+  .card p{margin:0; font-weight:600}
+  .footer{display:flex; justify-content:space-between; align-items:center; font-size:12px; color:var(--muted)}
+  .link{color:var(--brand); text-decoration:none}
+</style>
+</head>
+<body>
+  <div class="app">
+    <aside>
+      <h1>DECKO Deck Calculator</h1>
+      <p class="sub">GitHub Pages–ready starter. Adjust the space, tile size, and pattern. Drag the corner handles to resize the main area.</p>
+
+      <fieldset>
+        <legend class="pill">📏 Units: millimetres (mm)</legend>
+        <div class="row">
+          <div>
+            <label for="deckW">Deck width (mm)</label>
+            <input id="deckW" type="number" min="100" step="10" value="3600" />
+          </div>
+          <div>
+            <label for="deckH">Deck depth (mm)</label>
+            <input id="deckH" type="number" min="100" step="10" value="2400" />
+          </div>
+        </div>
+        <div class="row">
+          <div>
+            <label for="tileW">Tile width (mm)</label>
+            <input id="tileW" type="number" min="50" step="10" value="300" />
+          </div>
+          <div>
+            <label for="tileH">Tile height (mm)</label>
+            <input id="tileH" type="number" min="50" step="10" value="300" />
+          </div>
+        </div>
+        <div class="row">
+          <div>
+            <label for="pattern">Pattern</label>
+            <select id="pattern">
+              <option value="vertical">Vertical</option>
+              <option value="horizontal">Horizontal</option>
+              <option value="checker">Checker</option>
+            </select>
+          </div>
+          <div>
+            <label for="grid">Grid size (mm)</label>
+            <input id="grid" type="number" min="50" step="50" value="100" />
+          </div>
+        </div>
+        <div class="row">
+          <div>
+            <label for="rampW">Ramp width (mm)</label>
+            <input id="rampW" type="number" min="10" step="10" value="80" />
+          </div>
+          <div>
+            <label for="includeRamps">Edge ramps</label>
+            <select id="includeRamps">
+              <option value="none">None</option>
+              <option value="left-right">Left + Right</option>
+              <option value="top-bottom">Top + Bottom</option>
+            </select>
+          </div>
+        </div>
+        <div class="toolbar" style="margin-top:10px">
+          <button class="btn ghost" id="fit">Fit to view</button>
+          <button class="btn" id="reset">Reset handles</button>
+          <button class="btn primary" id="export">Export JSON</button>
+        </div>
+      </fieldset>
+
+      <div class="summary" id="summary">
+        <div class="card"><h3>Area (m²)</h3><p id="s-area">—</p></div>
+        <div class="card"><h3>Tiles (est.)</h3><p id="s-tiles">—</p></div>
+        <div class="card"><h3>Ramps (pcs)</h3><p id="s-ramps">—</p></div>
+        <div class="card"><h3>Corners (pcs)</h3><p id="s-corners">—</p></div>
+      </div>
+    </aside>
+
+    <main>
+      <div class="toolbar">
+        <span class="pill">Drag the ◯ handles to resize the deck area</span>
+        <span class="pill">Hold <strong>Shift</strong> to snap to grid</span>
+      </div>
+      <canvas id="stage" class="gridline" aria-label="Deck planner canvas"></canvas>
+      <div class="legend">
+        <span class="swatch" style="background:#e5f6ff"></span> Tile (visual)
+        <span class="swatch" style="background:#fde68a"></span> Ramp zone (visual)
+        <span class="swatch" style="background:#d1fae5"></span> Checker alt tile
+      </div>
+      <div class="footer">
+        <span>DECKO premium look • Boilerplate v1.0</span>
+        <a class="link" href="#" id="downloadPNG">Download view as PNG</a>
+      </div>
+    </main>
+  </div>
+
+<script>
+(function(){
+  // --- State ---
+  const el = {
+    stage: document.getElementById('stage'),
+    deckW: document.getElementById('deckW'),
+    deckH: document.getElementById('deckH'),
+    tileW: document.getElementById('tileW'),
+    tileH: document.getElementById('tileH'),
+    grid:  document.getElementById('grid'),
+    pattern: document.getElementById('pattern'),
+    includeRamps: document.getElementById('includeRamps'),
+    fit: document.getElementById('fit'),
+    reset: document.getElementById('reset'),
+    exportBtn: document.getElementById('export'),
+    sArea: document.getElementById('s-area'),
+    sTiles: document.getElementById('s-tiles'),
+    sRamps: document.getElementById('s-ramps'),
+    sCorners: document.getElementById('s-corners'),
+    downloadPNG: document.getElementById('downloadPNG')
+  };
+
+  const state = {
+    deckW: +el.deckW.value, // mm
+    deckH: +el.deckH.value, // mm
+    tileW: +el.tileW.value, // mm
+    tileH: +el.tileH.value, // mm
+    grid: +el.grid.value,   // mm per grid cell (visual)
+    pattern: el.pattern.value,
+    includeRamps: el.includeRamps.value,
+    // Canvas mapping
+    scale: 1, // px per mm (computed)
+    padding: 30, // px around drawing
+    // Interactive rect (deck area) in mm coordinates
+    rect: { x:0, y:0, w:+el.deckW.value, h:+el.deckH.value },
+    dragging: null, // 'tl','tr','bl','br' or 'move'
+    hover: null
+  };
+
+  // --- Canvas setup with HiDPI scaling ---
+  const ctx = el.stage.getContext('2d');
+  function resizeCanvas(){
+    const dpr = window.devicePixelRatio || 1;
+    const cssW = el.stage.clientWidth;
+    const cssH = el.stage.clientHeight;
+    el.stage.width = Math.floor(cssW * dpr);
+    el.stage.height = Math.floor(cssH * dpr);
+    ctx.setTransform(dpr,0,0,dpr,0,0); // scale drawing ops to CSS pixels
+    fitToView();
+    draw();
+  }
+  window.addEventListener('resize', resizeCanvas);
+
+  // --- Fit rect to view ---
+  function fitToView(){
+    const availW = el.stage.clientWidth - state.padding*2;
+    const availH = el.stage.clientHeight - state.padding*2;
+    const sX = availW / state.rect.w; // mm -> px scale
+    const sY = availH / state.rect.h;
+    state.scale = Math.max(0.05, Math.min(sX, sY));
+  }
+
+  // --- Helpers ---
+  const mm2px = mm => mm * state.scale;
+  const px2mm = px => px / state.scale;
+
+  function handlePoints(){
+    const {x,y,w,h} = state.rect;
+    return {
+      tl:{x, y}, tr:{x:x+w, y}, bl:{x, y:y+h}, br:{x:x+w, y:y+h}
+    }
+  }
+
+  function drawGrid(){
+    const g = state.grid; // mm
+    if(!g) return;
+    ctx.save();
+    ctx.translate(state.padding, state.padding);
+    ctx.lineWidth = 1;
+    ctx.strokeStyle = '#eef2f7';
+    const maxW = mm2px(Math.max(state.rect.w*1.2, 2000));
+    const maxH = mm2px(Math.max(state.rect.h*1.2, 2000));
+    // verticals
+    for(let x=0; x<=maxW; x+=mm2px(g)){
+      ctx.beginPath(); ctx.moveTo(x,0); ctx.lineTo(x,maxH); ctx.stroke();
+    }
+    // horizontals
+    for(let y=0; y<=maxH; y+=mm2px(g)){
+      ctx.beginPath(); ctx.moveTo(0,y); ctx.lineTo(maxW,y); ctx.stroke();
+    }
+    ctx.restore();
+  }
+
+  function draw(){
+    const W = el.stage.clientWidth, H = el.stage.clientHeight;
+    ctx.clearRect(0,0,W,H);
+    drawGrid();
+
+    // Deck area
+    const {x,y,w,h} = state.rect;
+    const ox = state.padding, oy = state.padding;
+
+    // Ramps visual (if any)
+    if(state.includeRamps !== 'none'){
+      ctx.save();
+      ctx.translate(ox,oy);
+      ctx.fillStyle = '#fde68a';
+      const ramp = +el.rampW.value || 80; // mm
+      if(state.includeRamps === 'left-right'){
+        ctx.fillRect(mm2px(x)-mm2px(ramp), mm2px(y), mm2px(ramp), mm2px(h)); // left
+        ctx.fillRect(mm2px(x+w), mm2px(y), mm2px(ramp), mm2px(h)); // right
+      } else if(state.includeRamps === 'top-bottom'){
+        ctx.fillRect(mm2px(x), mm2px(y)-mm2px(ramp), mm2px(w), mm2px(ramp)); // top
+        ctx.fillRect(mm2px(x), mm2px(y+h), mm2px(w), mm2px(ramp)); // bottom
+      }
+      ctx.restore();
+    }
+
+    // Tiles visualisation
+    ctx.save();
+    ctx.translate(ox,oy);
+    const tW = state.tileW, tH = state.tileH;
+    const cols = Math.ceil(w / tW);
+    const rows = Math.ceil(h / tH);
+    for(let r=0;r<rows;r++){
+      for(let c=0;c<cols;c++){
+        const tx = x + c*tW;
+        const ty = y + r*tH;
+        // Skip outside deck bounds
+        if(tx >= x+w || ty >= y+h) continue;
+        // Checker alt fill
+        const checker = (r + c) % 2 === 0;
+        if(state.pattern === 'checker'){
+          ctx.fillStyle = checker ? '#e5f6ff' : '#d1fae5';
+        } else {
+          ctx.fillStyle = '#e5f6ff';
+        }
+        // Orientation decoration
+        ctx.fillRect(mm2px(tx), mm2px(ty), mm2px(tW), mm2px(tH));
+        ctx.strokeStyle = '#bae6fd';
+        ctx.strokeRect(mm2px(tx), mm2px(ty), mm2px(tW), mm2px(tH));
+        // draw orientation line
+        ctx.beginPath();
+        ctx.strokeStyle = '#93c5fd';
+        if(state.pattern === 'horizontal'){
+          ctx.moveTo(mm2px(tx), mm2px(ty + tH/2));
+          ctx.lineTo(mm2px(tx + tW), mm2px(ty + tH/2));
+        } else {
+          ctx.moveTo(mm2px(tx + tW/2), mm2px(ty));
+          ctx.lineTo(mm2px(tx + tW/2), mm2px(ty + tH));
+        }
+        ctx.stroke();
+      }
+    }
+
+    // Deck border
+    ctx.strokeStyle = '#0ea5e9';
+    ctx.lineWidth = 2;
+    ctx.strokeRect(ox + mm2px(x), oy + mm2px(y), mm2px(w), mm2px(h));
+
+    // Corner handles
+    const handles = handlePoints();
+    ctx.fillStyle = '#0ea5e9';
+    Object.values(handles).forEach(p=>{
+      ctx.beginPath();
+      ctx.arc(ox + mm2px(p.x), oy + mm2px(p.y), 6, 0, Math.PI*2);
+      ctx.fill();
+      ctx.fillStyle = '#fff';
+      ctx.beginPath();
+      ctx.arc(ox + mm2px(p.x), oy + mm2px(p.y), 3.5, 0, Math.PI*2);
+      ctx.fill();
+      ctx.fillStyle = '#0ea5e9';
+    });
+    ctx.restore();
+
+    updateSummary();
+  }
+
+  function updateSummary(){
+    // Area in m^2
+    const area_m2 = (state.rect.w * state.rect.h) / 1_000_000;
+    el.sArea.textContent = area_m2.toFixed(2);
+    // Tile count estimate: grid fit (no cuts considered)
+    const cols = Math.ceil(state.rect.w / state.tileW);
+    const rows = Math.ceil(state.rect.h / state.tileH);
+    el.sTiles.textContent = (cols * rows).toString();
+    // Ramps and corners (very simple estimate)
+    let ramps = 0, corners = 0;
+    if(state.includeRamps === 'left-right'){
+      ramps = Math.ceil(state.rect.h / state.tileH) * 2;
+      corners = 2;
+    } else if(state.includeRamps === 'top-bottom'){
+      ramps = Math.ceil(state.rect.w / state.tileW) * 2;
+      corners = 2;
+    }
+    el.sRamps.textContent = ramps.toString();
+    el.sCorners.textContent = corners.toString();
+  }
+
+  // --- Events: inputs ---
+  function applyInputs(){
+    state.deckW = +el.deckW.value || state.deckW;
+    state.deckH = +el.deckH.value || state.deckH;
+    state.tileW = +el.tileW.value || state.tileW;
+    state.tileH = +el.tileH.value || state.tileH;
+    state.grid  = +el.grid.value || state.grid;
+    state.pattern = el.pattern.value;
+    state.includeRamps = el.includeRamps.value;
+    // Keep rect in sync with deckW/H for simple start
+    state.rect.w = state.deckW;
+    state.rect.h = state.deckH;
+    fitToView();
+    draw();
+  }
+  ['deckW','deckH','tileW','tileH','grid','pattern','includeRamps'].forEach(id=>{
+    document.getElementById(id).addEventListener('input', applyInputs);
+    document.getElementById(id).addEventListener('change', applyInputs);
+  });
+
+  // --- Drag logic ---
+  function hitTestHandle(mx,my){
+    const ox = state.padding, oy = state.padding;
+    const handles = handlePoints();
+    const r = 10; // px radius
+    for(const [name,p] of Object.entries(handles)){
+      const hx = ox + mm2px(p.x);
+      const hy = oy + mm2px(p.y);
+      const dx = mx - hx, dy = my - hy;
+      if(dx*dx + dy*dy <= r*r){ return name; }
+    }
+    // Inside rect? allow move (optional, disabled for now)
+    return null;
+  }
+
+  el.stage.addEventListener('mousedown', (e)=>{
+    const rect = el.stage.getBoundingClientRect();
+    const mx = e.clientX - rect.left;
+    const my = e.clientY - rect.top;
+    const hit = hitTestHandle(mx,my);
+    if(hit){ state.dragging = hit; }
+  });
+  window.addEventListener('mouseup', ()=>{ state.dragging=null; });
+  window.addEventListener('mousemove', (e)=>{
+    if(!state.dragging) return;
+    const rect = el.stage.getBoundingClientRect();
+    const mx = e.clientX - rect.left - state.padding;
+    const my = e.clientY - rect.top - state.padding;
+    const mmx = Math.max(0, px2mm(mx));
+    const mmy = Math.max(0, px2mm(my));
+    const snap = e.shiftKey ? state.grid : 1;
+    const sx = snap>1 ? Math.round(mmx/snap)*snap : mmx;
+    const sy = snap>1 ? Math.round(mmy/snap)*snap : mmy;
+
+    const R = state.rect;
+    if(state.dragging==='tl'){
+      const nx = Math.min(sx, R.x + R.w - 50);
+      const ny = Math.min(sy, R.y + R.h - 50);
+      R.w = (R.x + R.w) - nx; R.h = (R.y + R.h) - ny; R.x = nx; R.y = ny;
+    } else if(state.dragging==='tr'){
+      const nx = Math.max(sx, R.x + 50);
+      const ny = Math.min(sy, R.y + R.h - 50);
+      R.w = nx - R.x; R.h = (R.y + R.h) - ny; R.y = ny;
+    } else if(state.dragging==='bl'){
+      const nx = Math.min(sx, R.x + R.w - 50);
+      const ny = Math.max(sy, R.y + 50);
+      R.w = (R.x + R.w) - nx; R.h = ny - R.y; R.x = nx;
+    } else if(state.dragging==='br'){
+      const nx = Math.max(sx, R.x + 50);
+      const ny = Math.max(sy, R.y + 50);
+      R.w = nx - R.x; R.h = ny - R.y;
+    }
+    // keep deckW/H inputs in sync
+    el.deckW.value = Math.round(R.w);
+    el.deckH.value = Math.round(R.h);
+    draw();
+  });
+
+  // --- Buttons ---
+  el.fit.addEventListener('click', ()=>{ fitToView(); draw(); });
+  el.reset.addEventListener('click', ()=>{
+    state.rect = {x:0, y:0, w: +el.deckW.value, h:+el.deckH.value};
+    fitToView(); draw();
+  });
+  el.exportBtn.addEventListener('click', ()=>{
+    const data = {
+      deck_mm: { width: +el.deckW.value, height:+el.deckH.value },
+      tile_mm: { width: +el.tileW.value, height:+el.tileH.value },
+      grid_mm: +el.grid.value,
+      pattern: el.pattern.value,
+      includeRamps: el.includeRamps.value,
+      rect_mm: state.rect
+    };
+    const blob = new Blob([JSON.stringify(data,null,2)], {type:'application/json'});
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url; a.download = 'decko-deck-config.json'; a.click();
+    URL.revokeObjectURL(url);
+  });
+
+  el.downloadPNG.addEventListener('click', (e)=>{
+    e.preventDefault();
+    // Create a temp canvas at current CSS size
+    const dpr = window.devicePixelRatio || 1;
+    const w = el.stage.clientWidth, h = el.stage.clientHeight;
+    const tmp = document.createElement('canvas');
+    tmp.width = w * dpr; tmp.height = h * dpr;
+    const tctx = tmp.getContext('2d');
+    tctx.setTransform(dpr,0,0,dpr,0,0);
+    // simple render: white bg
+    tctx.fillStyle = '#fff'; tctx.fillRect(0,0,w,h);
+    // Copy by re-drawing current frame
+    // Quick hack: temporarily point ctx to tctx by recreating draw ops
+    // We'll call draw() using the main ctx but with an overlay image copy.
+    // Simpler: draw the existing canvas scaled onto tmp
+    tctx.drawImage(el.stage, 0,0, w,h);
+    const url = tmp.toDataURL('image/png');
+    const a = document.createElement('a'); a.href=url; a.download='decko-view.png'; a.click();
+  });
+
+  // --- Init ---
+  resizeCanvas();
+})();
+</script>
+
+<!--
+  ▸ How to deploy on GitHub Pages
+  1) Create a repo and add this file as index.html
+  2) Repo Settings → Pages → Source: main /root → Save
+  3) Open the Pages URL and test live
+
+  ▸ Roadmap / TODOs for your DECKO app
+  - Add polygon areas + no-go zones with measurements
+  - Auto-fill algorithm that minimises cuts and outputs a cut list
+  - Pattern library (vertical, horizontal, checker, herringbone etc.)
+  - Export bill of materials (tiles, ramps, corners) as CSV / PDF
+  - Snapshot share links (encode state into URL hash)
+  - Unit toggle mm ↔︎ inches
+-->
+</body>
+</html>
